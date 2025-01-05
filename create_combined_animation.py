@@ -12,26 +12,29 @@ def create_combined_animation(tracking_df, play_df, output_file='combined_animat
     line_set_frame = events[events['event'] == 'line_set']['frameId'].min()
     snap_frame = events[events['event'] == 'ball_snap']['frameId'].min()
     
-    # Initialize the figure with space for both plots
+    # Initialize the figure with space for both plots and minimal padding
     fig = plt.figure(figsize=(10, 14))
+    fig.subplots_adjust(left=0.08, right=0.95, bottom=0.02)  # Reduced bottom margin from 0.05 to 0.02
     
-    # Create main title with play details
-    title_text = (f"Play {int(play_df['playId'])} - Week 1 - {play_df['possessionTeam']} vs {play_df['defensiveTeam']}")
-    fig.text(0.5, 0.98, title_text, fontsize=12, fontweight='bold', ha='center')
+    # Create main title with new structure
+    fig.text(0.5, 0.98, "DENT Demonstration", 
+             fontsize=16, fontweight='bold', ha='center')
     
-    # Add subtitle lines without bold - reduced spacing between lines
-    fig.text(0.5, 0.965, f"Q{play_df['quarter']} {play_df['gameClock']}", 
-             fontsize=12, ha='center')
-    fig.text(0.5, 0.95, play_df['playDescription'], 
-             fontsize=12, ha='center')
+    # Add play details line without bold
+    fig.text(0.5, 0.96, f"Play {int(play_df['playId'])} - Week 1 - {play_df['possessionTeam']} vs {play_df['defensiveTeam']} - Q{play_df['quarter']} {play_df['gameClock']}", 
+             fontsize=16, ha='center')
     
-    # Create subplots with consistent width
-    field_ax = fig.add_axes([0.12, 0.48, 0.75, 0.4])  # Field plot position
-    graph_ax = fig.add_axes([0.12, 0.15, 0.75, 0.25])  # Bottom plot position unchanged
+    # Add play description without bold
+    fig.text(0.5, 0.94, play_df['playDescription'], 
+             fontsize=16, ha='center')
+    
+    # Create subplots with consistent width and reduced padding
+    field_ax = fig.add_axes([0.08, 0.48, 0.87, 0.4])  # Wider field plot
+    graph_ax = fig.add_axes([0.08, 0.15, 0.87, 0.25])  # Wider entropy plot
     
     # Add frame counter and event text above field with less spacing
-    frame_text = fig.text(0.12, 0.90, '', fontsize=10, ha='left')
-    event_text = fig.text(0.12, 0.885, '', fontsize=10, ha='left')
+    frame_text = fig.text(0.08, 0.90, '', fontsize=10, ha='left')  # Adjusted x position
+    event_text = fig.text(0.08, 0.885, '', fontsize=10, ha='left')  # Adjusted x position
     
     # Set up field plot - show 0 to 50 yard line
     field_ax.set_xlim(10, 60)  # Show only 0-50 yards (tracking coords 10-60)
@@ -39,7 +42,7 @@ def create_combined_animation(tracking_df, play_df, output_file='combined_animat
     field_ax.set_aspect('auto')
     
     # Add padding to maintain field proportions
-    field_ax.set_position([0.12, 0.48, 0.75, 0.4])  # Moved up to match creation
+    field_ax.set_position([0.08, 0.48, 0.87, 0.4])  # Match creation position
     
     # Draw field markings
     field_ax.set_facecolor('#2E8B57')  # Sea Green - more natural grass color
@@ -74,9 +77,29 @@ def create_combined_animation(tracking_df, play_df, output_file='combined_animat
     # Set up entropy plot
     graph_ax.set_xlim(start_frame, snap_frame)
     graph_ax.set_ylim(0, 100)
-    graph_ax.set_xlabel('Frame', fontsize=12)
-    graph_ax.set_ylabel('Normalized Entropy', fontsize=12)
+    graph_ax.set_xlabel('Frame', fontsize=16)
+    graph_ax.set_ylabel('Normalized Entropy', fontsize=16)
+    
+    # Customize grid to avoid overlap with event lines
     graph_ax.grid(True, alpha=0.3)
+    # Set grid lines every 10 frames
+    graph_ax.xaxis.set_major_locator(plt.MultipleLocator(10))
+    
+    # Make vertical borders transparent and add black top line
+    graph_ax.spines['left'].set_color('black')
+    graph_ax.spines['bottom'].set_color('black')
+    graph_ax.spines['right'].set_color('none')
+    graph_ax.spines['top'].set_color('black')  # Make top border black
+    
+    # Customize grid lines
+    graph_ax.grid(True, which='major', axis='y', alpha=0.3)
+    graph_ax.grid(True, which='major', axis='x', alpha=0.3)
+    
+    # Add black line at y=100
+    graph_ax.axhline(y=100, color='black', linewidth=1)
+    
+    # Increase tick label sizes
+    graph_ax.tick_params(axis='both', which='major', labelsize=12)
     
     # Initialize scatter plots for players
     positions = ['CB', 'DE']  # Only CB and DE
@@ -94,11 +117,11 @@ def create_combined_animation(tracking_df, play_df, output_file='combined_animat
     
     # Add team color legend at bottom of field plot
     team_legend = [
-        plt.Rectangle((0, 0), 1, 1, fc=home_color, alpha=0.8, label=f'{home_team} (Defense)'),
-        plt.Rectangle((0, 0), 1, 1, fc=away_color, alpha=0.8, label=f'{away_team} (Offense)')
+        plt.Rectangle((0, 0), 1, 1, fc=away_color, alpha=0.8, label=f'{away_team} (Offense)'),
+        plt.Rectangle((0, 0), 1, 1, fc=home_color, alpha=0.8, label=f'{home_team} (Defense)')
     ]
     field_ax.legend(handles=team_legend, loc='upper center', 
-                   bbox_to_anchor=(0.5, -0.02), ncol=2, fontsize=10)  # Moved closer to field
+                   bbox_to_anchor=(0.5, -0.01), ncol=2, fontsize=12)
     
     # Initialize player plots, labels, and entropy lines
     players = {}
@@ -129,14 +152,25 @@ def create_combined_animation(tracking_df, play_df, output_file='combined_animat
     graph_ax.axvline(x=line_set_frame, color='green', linestyle='--', alpha=0.5)
     graph_ax.axvline(x=snap_frame, color='red', linestyle='--', alpha=0.5)
     
-    # Add "Line Set" text annotation
-    graph_ax.text(line_set_frame, 102, 'Line Set', 
-                 horizontalalignment='center', verticalalignment='bottom')
+    # Add event text annotations with bold weight
+    graph_ax.text(start_frame, 105, 'Start', 
+                 horizontalalignment='center', verticalalignment='bottom',
+                 fontweight='bold')
+    graph_ax.text(line_set_frame, 105, 'Line Set', 
+                 horizontalalignment='center', verticalalignment='bottom',
+                 fontweight='bold')
+    graph_ax.text(snap_frame, 105, 'Snap', 
+                 horizontalalignment='center', verticalalignment='bottom',
+                 fontweight='bold')
     
-    # Create legend for entropy plot
+    # Create legend for entropy plot with jersey numbers
+    first_frame = tracking_df[tracking_df['frameId'] == start_frame]
+    cb_number = int(first_frame[first_frame['position'] == 'CB']['jerseyNumber'].iloc[0])
+    de_number = int(first_frame[first_frame['position'] == 'DE']['jerseyNumber'].iloc[0])
+    
     legend_elements = [
-        Line2D([0], [0], color=color, label=f"{pos}", linewidth=2)
-        for pos, color in zip(positions, colors)
+        Line2D([0], [0], color=colors[0], label=f"CB #{cb_number}", linewidth=2),
+        Line2D([0], [0], color=colors[1], label=f"DE #{de_number}", linewidth=2)
     ]
     legend_elements.extend([
         Line2D([0], [0], color='gray', linestyle='--', label='Start', alpha=0.5),
@@ -146,7 +180,7 @@ def create_combined_animation(tracking_df, play_df, output_file='combined_animat
     
     # Add legend at the bottom with minimal spacing
     graph_ax.legend(handles=legend_elements, loc='upper center', 
-                   bbox_to_anchor=(0.5, -0.15), ncol=5, fontsize=10)
+                   bbox_to_anchor=(0.5, -0.15), ncol=5, fontsize=12)  # Moved up from -0.18 to -0.15
     
     def init():
         # Initialize all elements
