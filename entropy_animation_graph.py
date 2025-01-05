@@ -2,75 +2,151 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.lines import Line2D
+import seaborn as sns
 
-# Read the entropy data from the previous analysis
-def load_entropy_data():
-    # Read data
-    tracking_df = pd.read_csv('tracking_week_1.csv')
-    plays_df = pd.read_csv('plays.csv')
-    players_df = pd.read_csv('players.csv')
-
-    # Get SEA vs DEN game
-    sea_den_plays = plays_df[
-        ((plays_df['possessionTeam'] == 'SEA') & (plays_df['defensiveTeam'] == 'DEN')) |
-        ((plays_df['possessionTeam'] == 'DEN') & (plays_df['defensiveTeam'] == 'SEA'))
-    ]
-    sea_den_game = sea_den_plays['gameId'].iloc[0]
-
-    # Filter for play 64
-    play_df = tracking_df[
-        (tracking_df['gameId'] == sea_den_game) & 
-        (tracking_df['playId'] == 64)
-    ].copy()
-
-    # Get play details
-    play_details = plays_df[
-        (plays_df['gameId'] == sea_den_game) & 
-        (plays_df['playId'] == 64)
-    ].iloc[0]
-
-    # Merge with players data
-    play_df = play_df.merge(
-        players_df[['nflId', 'position', 'displayName']], 
-        on='nflId', 
-        how='left'
-    )
-
-    return play_df, play_details
-
-# Calculate entropy values (reusing the function from entropy_calc.py)
-def calculate_player_entropy(player_data, all_defenders):
-    # Constants for entropy calculation
-    w_theta = 0.3  # Weight for orientation
-    w_v = 0.2      # Weight for velocity
-    v_max = 10.0   # Maximum velocity for normalization (yards/second)
-    grid_size = 1.0  # 1-yard grid
-    sigma = 2.0    # Gaussian spread parameter
+def create_entropy_animation(tracking_df, play_df, output_file='entropy_animation.gif'):
+    # Get events and frames
+    events = tracking_df.sort_values('frameId')
+    start_frame = events['frameId'].min()
+    line_set_frame = events[events['event'] == 'line_set']['frameId'].min()
+    snap_frame = events[events['event'] == 'ball_snap']['frameId'].min()
     
-    # Get player position and movement data
-    x = player_data['x']
-    y = player_data['y']
-    theta = player_data['dir']  # Player's facing direction
-    v = np.sqrt(player_data['s']**2)  # Using speed only, excluding acceleration
+    print(f"Found frames - Start: {start_frame}, Line Set: {line_set_frame}, Snap: {snap_frame}")
+    
+    if pd.isna(line_set_frame) or pd.isna(snap_frame):
+        print("Error: Could not find all required frames")
+        return None
+    
+    # Initialize the figure with more height for titles
+    fig = plt.figure(figsize=(10, 8))
+    
+    # Create main title at the top
+    fig.suptitle('Defensive Player Entropy Over Time\nFrom First Frame to Snap', 
+                 fontsize=14, fontweight='bold', y=0.95)
+    
+    # Create subplot with specific position to control spacing
+    ax = fig.add_axes([0.12, 0.15, 0.75, 0.65])  # [left, bottom, width, height]
+    
+    # Set up the plot
+    ax.set_xlim(start_frame, snap_frame)
+    ax.set_ylim(0, 100)
+    ax.set_xlabel('Frame', fontsize=12)
+    ax.set_ylabel('Normalized Entropy', fontsize=12)
+    
+    # Initialize lines dictionary with red tones
+    lines = {}
+    positions = ['CB', 'DE']  # Only CB and DE
+    colors = ['#ff0000', '#8b0000']  # Red and Dark Red
+    
+    # Get player numbers for each position
+    player_numbers = {}
+    for pos in positions:
+        pos_data = tracking_df[
+            (tracking_df['frameId'] == start_frame) & 
+            (tracking_df['position'] == pos)
+        ].iloc[0]
+        player_numbers[pos] = int(pos_data['jerseyNumber'])
+    
+    for pos, color in zip(positions, colors):
+        # Create label with player number
+        label = f"{pos} #{player_numbers[pos]}"
+        line = ax.add_line(Line2D([], [], color=color, label=label, linewidth=2))
+        lines[pos] = {'line': line, 'xdata': [], 'ydata': []}
+    
+    # Add vertical lines for events
+    ax.axvline(x=start_frame, color='gray', linestyle='--', alpha=0.5)
+    line_set_line = ax.axvline(x=line_set_frame, color='green', linestyle='--', alpha=0.5)
+    ax.axvline(x=snap_frame, color='red', linestyle='--', alpha=0.5)
+    
+    # Add "Line Set" text annotation at the top of the plot
+    ax.text(line_set_frame, 102, 'Line Set', 
+            horizontalalignment='center', verticalalignment='bottom')
+    
+    # Create custom legend elements
+    legend_elements = [
+        Line2D([0], [0], color=color, label=f"{pos} #{player_numbers[pos]}", linewidth=2)
+        for pos, color in zip(positions, colors)
+    ]
+    legend_elements.extend([
+        Line2D([0], [0], color='gray', linestyle='--', label='Start', alpha=0.5),
+        Line2D([0], [0], color='green', linestyle='--', label='Line Set', alpha=0.5),
+        Line2D([0], [0], color='red', linestyle='--', label='Snap', alpha=0.5)
+    ])
+    
+    # Add legend at the bottom
+    ax.legend(handles=legend_elements, loc='upper center', 
+             bbox_to_anchor=(0.5, -0.15), ncol=5, fontsize=12)
+    
+    def init():
+        for pos_data in lines.values():
+            pos_data['line'].set_data([], [])
+        return [pos_data['line'] for pos_data in lines.values()]
+    
+    def animate(frame):
+        current_frame = frame + start_frame
+        
+        # Only calculate and show entropy between line_set and snap
+        if line_set_frame <= current_frame <= snap_frame:
+            frame_data = tracking_df[tracking_df['frameId'] == current_frame]
+            
+            for pos in positions:
+                pos_data = frame_data[frame_data['position'] == pos]
+                if not pos_data.empty:
+                    # Take only the first player of each position
+                    pos_data = pos_data.iloc[[0]]
+                    entropy = calculate_entropy(pos_data)
+                    lines[pos]['xdata'].append(current_frame)
+                    lines[pos]['ydata'].append(entropy)
+                    lines[pos]['line'].set_data(lines[pos]['xdata'], lines[pos]['ydata'])
+        
+        return [pos_data['line'] for pos_data in lines.values()]
+    
+    # Create animation
+    frames = int(snap_frame - start_frame + 1)
+    print(f"Creating animation with {frames} frames...")
+    
+    anim = animation.FuncAnimation(fig, animate, init_func=init, frames=frames,
+                                 interval=100, blit=True)
+    
+    # Save animation
+    print(f"Saving animation to {output_file}...")
+    anim.save(output_file, writer='pillow')
+    plt.close()
+    print("Animation saved successfully")
+
+def calculate_entropy(pos_data):
+    """Calculate entropy for a player's position data"""
+    # Constants
+    w_theta = 0.3
+    w_v = 0.2
+    v_max = 10.0
+    grid_size = 1.0
+    sigma = 2.0
+    
+    # Get player data
+    x = pos_data['x'].iloc[0]
+    y = pos_data['y'].iloc[0]
+    theta = pos_data['dir'].iloc[0]
+    v = pos_data['s'].iloc[0]
     
     # Calculate angle relative to ball
-    ball_y = 26.65  # Center of field width (53.3/2)
+    ball_y = 26.65  # Center of field width
     theta_relative = np.abs(theta - np.degrees(np.arctan2(ball_y - y, 60 - x)))
     
     # Create grid for field discretization
     x_grid = np.arange(max(0, x-10), min(120, x+10), grid_size)
     y_grid = np.arange(max(0, y-10), min(53.3, y+10), grid_size)
+    X, Y = np.meshgrid(x_grid, y_grid)
     
     # Calculate base position probability
-    p = np.zeros((len(x_grid), len(y_grid)))
-    for def_x, def_y in all_defenders[['x', 'y']].values:
-        for i, gx in enumerate(x_grid):
-            for j, gy in enumerate(y_grid):
-                dist = np.sqrt((gx-def_x)**2 + (gy-def_y)**2)
-                p[i,j] += np.exp(-dist**2/(2*sigma**2))
+    p = np.zeros_like(X)
+    for _, player in pos_data.iterrows():
+        dist = np.sqrt((X - player['x'])**2 + (Y - player['y'])**2)
+        p += np.exp(-dist**2/(2*sigma**2))
     
     # Normalize probabilities
-    p = p / np.sum(p)
+    p = p / (np.sum(p) + 1e-10)
     
     # Calculate orientation factor
     orientation_factor = 1 + w_theta * np.cos(np.radians(theta_relative))
@@ -82,142 +158,45 @@ def calculate_player_entropy(player_data, all_defenders):
     base_entropy = -np.sum(p * np.log2(p + 1e-10))
     total_entropy = base_entropy * orientation_factor * velocity_factor
     
-    return total_entropy
+    # Normalize to 0-100 scale
+    return total_entropy * 10  # Scale factor to get reasonable range
 
-# Create animation
-def create_entropy_animation():
-    # Load data
-    play_df, play_details = load_entropy_data()
-    defensive_team = play_details['defensiveTeam']
+def main():
+    print("Loading data...")
+    # Load your data
+    tracking_df = pd.read_csv('tracking_week_1.csv')
+    plays_df = pd.read_csv('plays.csv')
+    players_df = pd.read_csv('players.csv')
     
-    # Find snap frames
-    snap_frame = play_df[play_df['event'] == 'ball_snap']['frameId'].min()
-    line_set_frame = play_df[play_df['event'] == 'line_set']['frameId'].min()
+    # Get SEA vs DEN game
+    print("Finding specific play...")
+    sea_den_plays = plays_df[
+        ((plays_df['possessionTeam'] == 'SEA') & (plays_df['defensiveTeam'] == 'DEN')) |
+        ((plays_df['possessionTeam'] == 'DEN') & (plays_df['defensiveTeam'] == 'SEA'))
+    ]
+    sea_den_game = sea_den_plays['gameId'].iloc[0]
     
-    # Filter for pre-snap frames
-    play_df = play_df[
-        (play_df['frameId'] >= line_set_frame) & 
-        (play_df['frameId'] <= snap_frame)
+    # Filter for play 64 (a good example play)
+    play_data = tracking_df[
+        (tracking_df['gameId'] == sea_den_game) & 
+        (tracking_df['playId'] == 64)
     ].copy()
     
-    # Calculate entropy for each player at each frame
-    entropy_data = {}
-    frames = sorted(play_df['frameId'].unique())
+    # Merge with players data to get positions
+    play_data = play_data.merge(
+        players_df[['nflId', 'position']], 
+        on='nflId', 
+        how='left'
+    )
     
-    for frame in frames:
-        frame_data = play_df[play_df['frameId'] == frame].copy()
-        defense_data = frame_data[frame_data['club'] == defensive_team].copy()
-        
-        for _, player in defense_data.iterrows():
-            player_id = f"{player['position']} #{int(player['jerseyNumber'])}"
-            if player_id not in entropy_data:
-                entropy_data[player_id] = {
-                    'position': player['position'],
-                    'entropy_values': [],
-                    'frames': []
-                }
-            
-            entropy = calculate_player_entropy(player, defense_data)
-            entropy_data[player_id]['entropy_values'].append(entropy)
-            entropy_data[player_id]['frames'].append(frame)
+    play_info = plays_df[
+        (plays_df['gameId'] == sea_den_game) & 
+        (plays_df['playId'] == 64)
+    ].iloc[0]
     
-    # Create animation
-    fig = plt.figure(figsize=(15, 10))
-    
-    # Add play details at the top
-    play_text = (f"NFL Week 1, 2022: {play_details['possessionTeam']} vs {play_details['defensiveTeam']}\n"
-                f"Q{play_details['quarter']} {play_details['gameClock']} - Play #{play_details['playId']}\n"
-                f"{play_details['playDescription']}")
-    plt.figtext(0.5, 0.98, play_text, ha='center', va='top', fontsize=12, wrap=True)
-    
-    # Create main axis
-    ax = plt.subplot2grid((10, 1), (1, 0), rowspan=8)
-    
-    # Set title and labels
-    plt.title('Defensive Player Entropy Over Time\nPre-snap Analysis', 
-             fontsize=14, pad=15, weight='bold')
-    plt.xlabel('Frame', fontsize=12)
-    plt.ylabel('Entropy (bits)', fontsize=12)
-    
-    # Set axis limits
-    plt.xlim(line_set_frame, snap_frame)
-    plt.ylim(5, 11)
-    
-    # Add grid
-    plt.grid(True, alpha=0.3)
-    
-    # Color scheme for different positions
-    position_colors = {
-        'CB': '#1f77b4',  # Blue
-        'SS': '#2ca02c',  # Green
-        'FS': '#ff7f0e',  # Orange
-        'DE': '#d62728',  # Red
-        'NT': '#9467bd',  # Purple
-        'ILB': '#8c564b', # Brown
-        'OLB': '#e377c2'  # Pink
-    }
-    
-    # Initialize lines
-    lines = {}
-    markers = {}
-    labels = {}
-    frame_text = ax.text(0.02, 0.98, '', transform=ax.transAxes, fontsize=10,
-                        verticalalignment='top')
-    
-    def init():
-        for player_id, data in entropy_data.items():
-            position = data['position']
-            color = position_colors[position]
-            
-            # Create line
-            line, = ax.plot([], [], label=player_id, color=color, linewidth=2)
-            lines[player_id] = line
-            
-            # Create marker
-            marker, = ax.plot([], [], 'o', color=color, markersize=8)
-            markers[player_id] = marker
-            
-            # Create label
-            label = ax.text(0, 0, '', color=color, fontsize=10,
-                          bbox=dict(facecolor='white', edgecolor=color, alpha=0.7, pad=2))
-            labels[player_id] = label
-        
-        # Add legend
-        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10)
-        return list(lines.values()) + list(markers.values()) + list(labels.values()) + [frame_text]
-    
-    def update(frame_idx):
-        frame = frames[frame_idx]
-        frame_text.set_text(f'Frame: {frame}')
-        
-        for player_id, data in entropy_data.items():
-            # Get data up to current frame
-            current_frames = [f for f in data['frames'] if f <= frame]
-            current_entropy = data['entropy_values'][:len(current_frames)]
-            
-            # Update line
-            lines[player_id].set_data(current_frames, current_entropy)
-            
-            # Update marker
-            if current_frames:
-                markers[player_id].set_data([current_frames[-1]], [current_entropy[-1]])
-                
-                # Update label
-                labels[player_id].set_position((current_frames[-1], current_entropy[-1]))
-                labels[player_id].set_text(f"{player_id}\n{current_entropy[-1]:.2f}")
-        
-        return list(lines.values()) + list(markers.values()) + list(labels.values()) + [frame_text]
-    
-    # Create animation
-    anim = animation.FuncAnimation(fig, update, init_func=init,
-                                 frames=len(frames), interval=100, blit=True)
-    
-    # Adjust layout
-    plt.tight_layout(rect=[0, 0.05, 0.95, 0.95])
-    
-    # Save animation
-    anim.save('entropy_graph.gif', writer='pillow', fps=10)
-    print("\nAnimation saved as 'entropy_graph.gif'")
+    print("Creating animation...")
+    create_entropy_animation(play_data, play_info, 'entropy_graph.gif')
+    print("Animation saved as 'entropy_graph.gif'")
 
-# Generate the animation
-create_entropy_animation() 
+if __name__ == "__main__":
+    main() 
