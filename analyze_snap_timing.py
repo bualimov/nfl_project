@@ -57,12 +57,23 @@ print(f"Range: {min_time:.2f} to {max_time:.2f} seconds")
 print(f"25th percentile: {percentiles[0]:.2f} seconds")
 print(f"75th percentile: {percentiles[1]:.2f} seconds")
 
-# Create visualization
-fig = plt.figure(figsize=(12, 6))
+# Create visualization with extra space at top for title
+fig = plt.figure(figsize=(12, 8))  # Increased height for title space
 
-# Create primary axis for density
-ax1 = plt.gca()
+# Create subplot with specific position to leave room for title
+ax1 = plt.subplot2grid((1,1), (0,0))
 ax2 = ax1.twinx()  # Create secondary axis for counts
+
+# Adjust layout to accommodate title
+plt.subplots_adjust(top=0.85)  # Make room for title
+
+# Add title above plot - adjusted spacing
+plt.figtext(0.5, 0.97, 'Distribution of Time Between Line Set and Ball Snap', 
+            fontsize=14, weight='bold', ha='center')
+plt.figtext(0.5, 0.94, f'NFL Weeks 1-9, 2022: Plays with valid line_set and ball_snap events', 
+            fontsize=14, ha='center')
+plt.figtext(0.5, 0.91, f'Filtered Data: {len(snap_times):,} plays (excluding times < 1s or > 40s)', 
+            fontsize=14, ha='center')
 
 # Create histogram with density on left axis
 n, bins, patches = ax1.hist(snap_times, bins=50, density=True, alpha=0.6, color='skyblue', label='Distribution')
@@ -82,15 +93,14 @@ ax1.axvline(median_time, color='green', linestyle='--', alpha=0.8, label=f'Media
 ax1.axvline(percentiles[0], color='orange', linestyle=':', alpha=0.8, label=f'25th %ile: {percentiles[0]:.2f}s')
 ax1.axvline(percentiles[1], color='orange', linestyle=':', alpha=0.8, label=f'75th %ile: {percentiles[1]:.2f}s')
 
-# Customize plot
-plt.title('Distribution of Time Between Line Set and Ball Snap\nNFL Weeks 1-9, 2022', fontsize=14, pad=15, weight='bold')
-ax1.set_xlabel('Time (seconds)', fontsize=12)
-ax1.set_ylabel('Density', fontsize=12)
-ax2.set_ylabel('Number of Plays', fontsize=12)
+# Set axis labels with consistent font size
+ax1.set_xlabel('Time (seconds)', fontsize=14, fontweight='bold')
+ax1.set_ylabel('Density', fontsize=14, fontweight='bold')
+ax2.set_ylabel('Number of Plays', fontsize=14, fontweight='bold')
 
-# Add filtering information at the bottom
-plt.figtext(0.5, -0.05, f'Filtered Data: {len(snap_times):,} plays (excluding times < 1s or > 40s)\nWeeks 1-9 plays with valid line_set and ball_snap events',
-            fontsize=14, ha='center')
+# Increase tick label sizes
+ax1.tick_params(axis='both', which='major', labelsize=12)
+ax2.tick_params(axis='both', which='major', labelsize=12)
 
 # Adjust grid
 ax1.grid(True, alpha=0.3)
@@ -99,6 +109,5 @@ ax1.grid(True, alpha=0.3)
 ax1.legend(fontsize=10, loc='upper right')
 
 # Save plot
-plt.tight_layout()
 plt.savefig('snap_timing_distribution.png', dpi=300, bbox_inches='tight')
 print("\nVisualization saved as 'snap_timing_distribution.png'") 
