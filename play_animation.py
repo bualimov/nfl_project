@@ -2,8 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib.patches import Rectangle, Circle
-import matplotlib.patheffects as path_effects
+from matplotlib.patches import Rectangle
 
 # Read the tracking data, plays data, and players data
 print("Reading data...")
@@ -79,55 +78,40 @@ def create_animation():
                 f"{play_details['playDescription']}")
     plt.suptitle(play_text, y=0.95, fontsize=12, wrap=True)
     
-    # Calculate field view to ensure all players are visible
-    frame_data = play_df[play_df['frameId'] == snap_frame].copy()
-    player_x_coords = frame_data.apply(lambda row: convert_to_field_coords(row['x'], absolute_yardline), axis=1)
-    min_player_x = player_x_coords.min()
-    max_player_x = player_x_coords.max()
-    
-    # Add padding to ensure all players are visible
-    field_padding = 5  # yards of padding on each side
-    min_x = max(0, min(min_player_x - field_padding, ball_start - 25))
-    max_x = min(100, max(max_player_x + field_padding, ball_start + 25))
-    ax.set_xlim(min_x, max_x)
+    # Set field view from end zone (0) to midfield (50)
+    ax.set_xlim(0, 50)
     ax.set_ylim(0, 53.3)
     
-    # Draw football field with original green
-    field_color = '#90EE90'
+    # Draw football field with more natural grass color
+    field_color = '#2E8B57'  # Sea Green, more natural grass color
     ax.add_patch(Rectangle((0, 0), 100, 53.3, facecolor=field_color))
     
-    # Add Broncos logo at the 50-yard line
-    logo_circle = Circle((50, 26.65), radius=6, facecolor=TEAM_COLORS['DEN'], alpha=0.3)
-    ax.add_patch(logo_circle)
-    
-    # Add "DEN" text in the circle
-    logo_text = ax.text(50, 26.65, 'DEN', color='white', fontsize=20, fontweight='bold',
-                       ha='center', va='center')
-    logo_text.set_path_effects([path_effects.withStroke(linewidth=2, foreground='black')])
-    
     # Add yard lines and numbers
-    for yard in range(0, 101):
+    for yard in range(0, 51):  # Only up to 50 yard line
         # Yard lines
         if yard % 5 == 0:
             alpha = 0.5 if yard % 10 == 0 else 0.3
             ax.axvline(x=yard, color='white', linestyle='-', alpha=alpha)
+            
+            # Add hash marks at 5-yard intervals
+            # NFL hash marks are at 23.36666 yards and 29.96666 yards from each sideline
+            # Make hash marks shorter (0.5 yards) and use same alpha as yard lines
+            ax.plot([yard - 0.25, yard + 0.25], [23.36666, 23.36666], 'w-', alpha=alpha)
+            ax.plot([yard - 0.25, yard + 0.25], [29.96666, 29.96666], 'w-', alpha=alpha)
         
         # Yard numbers
         if yard % 10 == 0:
             if yard == 50:
                 number = '50'
-            elif yard < 50:
-                number = str(yard)
             else:
-                number = str(100 - yard)
+                number = str(yard)
             ax.text(yard, 5, number, ha='center', color='white', fontsize=16,
                    fontweight='bold', bbox=dict(facecolor='black', alpha=0.3,
                                               edgecolor='none', pad=0.5))
-    
-    # Add hash marks
-    for yard in range(0, 101):
-        ax.plot([yard, yard], [0.5, 1.5], 'w-', alpha=0.3)
-        ax.plot([yard, yard], [51.8, 52.8], 'w-', alpha=0.3)
+            # Add numbers on both sides
+            ax.text(yard, 48.3, number, ha='center', color='white', fontsize=16,
+                   fontweight='bold', bbox=dict(facecolor='black', alpha=0.3,
+                                              edgecolor='none', pad=0.5))
     
     # Remove axes
     ax.set_xticks([])
