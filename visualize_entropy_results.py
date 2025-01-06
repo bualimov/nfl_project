@@ -110,7 +110,7 @@ def create_entropy_difference_plot():
     plt.grid(False)
     
     # Set y-axis limits
-    plt.ylim(-4, 2)
+    plt.ylim(-7, 3)
     
     # Add value labels on top/bottom of bars with increased spacing
     for bar in bars:
