@@ -14,7 +14,7 @@ def create_combined_animation(tracking_df, play_df, output_file='combined_animat
     
     # Initialize the figure with space for both plots and minimal padding
     fig = plt.figure(figsize=(10, 14))
-    fig.subplots_adjust(left=0.08, right=0.95, bottom=0.02)  # Reduced bottom margin from 0.05 to 0.02
+    fig.subplots_adjust(left=0.08, right=0.95, bottom=0.01, top=0.99)  # Minimized margins
     
     # Create main title with new structure
     fig.text(0.5, 0.98, "DENT Demonstration", 
@@ -30,7 +30,7 @@ def create_combined_animation(tracking_df, play_df, output_file='combined_animat
     
     # Create subplots with consistent width and reduced padding
     field_ax = fig.add_axes([0.08, 0.48, 0.87, 0.4])  # Wider field plot
-    graph_ax = fig.add_axes([0.08, 0.15, 0.87, 0.25])  # Wider entropy plot
+    graph_ax = fig.add_axes([0.08, 0.08, 0.87, 0.30])  # Slightly reduced height
     
     # Add frame counter and event text above field with less spacing
     frame_text = fig.text(0.08, 0.90, '', fontsize=10, ha='left')  # Adjusted x position
@@ -180,7 +180,7 @@ def create_combined_animation(tracking_df, play_df, output_file='combined_animat
     
     # Add legend at the bottom with minimal spacing
     graph_ax.legend(handles=legend_elements, loc='upper center', 
-                   bbox_to_anchor=(0.5, -0.15), ncol=5, fontsize=12)  # Moved up from -0.18 to -0.15
+                   bbox_to_anchor=(0.5, -0.15), ncol=5, fontsize=12)  # Moved legend down
     
     def init():
         # Initialize all elements
