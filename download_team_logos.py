@@ -31,7 +31,15 @@ team_logos = {
     'CHI': 'https://static.www.nfl.com/image/private/f_auto/league/ra0poq2ivwyahbaq86d2',
     'JAX': 'https://static.www.nfl.com/image/private/f_auto/league/qycbib6ivrm9dqaexryk',
     'LV': 'https://static.www.nfl.com/image/private/f_auto/league/gzcojbzcyjgubgyb6xf2',
-    'SF': 'https://static.www.nfl.com/t_headshot_desktop_2x/f_auto/league/api/clubs/logos/SF'
+    'SF': 'https://static.www.nfl.com/t_headshot_desktop_2x/f_auto/league/api/clubs/logos/SF',
+    'DAL': 'https://static.www.nfl.com/image/private/f_auto/league/ieid8hoygzdlmzo0tnf6',
+    'NE': 'https://static.www.nfl.com/image/private/f_auto/league/moyfxx3dq5pio4aiftnc',
+    'MIA': 'https://static.www.nfl.com/image/private/f_auto/league/lits6p8ycthy9to70bnt',
+    'GB': 'https://static.www.nfl.com/image/private/f_auto/league/pln44vuzugjgipyidsre',
+    'SEA': 'https://static.www.nfl.com/t_headshot_desktop_2x/f_auto/league/api/clubs/logos/SEA',
+    'NYJ': 'https://static.www.nfl.com/image/private/f_auto/league/ekijosiae96gektbo4iw',
+    'DEN': 'https://static.www.nfl.com/image/private/f_auto/league/t0p7m5cjdjy18rnzzqbx',
+    'TB': 'https://static.www.nfl.com/t_headshot_desktop_2x/f_auto/league/api/clubs/logos/TB'
 }
 
 def download_and_resize_logo(team, url, size=(50, 50)):

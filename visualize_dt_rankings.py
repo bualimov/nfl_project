@@ -49,7 +49,7 @@ fig, (ax_names, ax_bars) = plt.subplots(1, 2, figsize=(12, 12.5),
                                        gridspec_kw={'width_ratios': [0.8, 1.7]})
 
 # Create y positions
-y_positions = np.arange(len(df)*0.65, 0, -0.65)
+y_positions = np.arange(len(df)*0.5, 0, -0.5)
 
 # Add player names and logos in the left subplot
 for i, (_, row) in enumerate(df.iterrows()):
@@ -66,7 +66,7 @@ for i, (_, row) in enumerate(df.iterrows()):
                  fontsize=14, va='center', ha='left')
 
 # Create horizontal bars
-bars = ax_bars.barh(y_positions, df['Entropy'], height=0.25, color='#1f77b4')
+bars = ax_bars.barh(y_positions, df['Entropy'], height=0.35, color='red', alpha=0.7)
 
 # Add entropy values at the end of each bar
 for i, value in enumerate(df['Entropy']):
@@ -74,13 +74,13 @@ for i, value in enumerate(df['Entropy']):
                 va='center', ha='left', fontsize=14)
 
 # Customize plots with two-line title
-fig.text(0.5, 0.96, 'Top 30 Defensive Tackles - 2022 Season', 
+fig.text(0.5, 0.96, 'NFL Defensive Tackle (DT) Entropy Distribution (2022)', 
          fontsize=22, fontweight='bold', ha='center')
-fig.text(0.5, 0.93, 'Ranked by PFF 2022 Rankings and Showing Calculated Entropy Values', 
+fig.text(0.5, 0.93, 'Top 30 DT Ranked by PFF', 
          fontsize=22, ha='center')
 
 # Set axis labels
-ax_bars.set_xlabel('Defensive Entropy Value', fontsize=14, fontweight='bold', labelpad=5)
+ax_bars.set_xlabel('Defensive Entropy Value (Normalized)', fontsize=14, fontweight='bold', labelpad=5)
 
 # Set axis limits
 ax_names.set_xlim(0, 1.1)

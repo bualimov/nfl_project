@@ -25,19 +25,27 @@ data = {
         'TB', 'TEN', 'JAX', 'NYG', 'CIN'
     ],
     'Entropy': [
-        52.34, 51.89, 51.76, 51.45, 51.23,
-        50.98, 50.87, 50.65, 50.43, 50.21,
-        49.98, 49.76, 49.54, 49.32, 49.10,
-        48.87, 48.65, 48.43, 48.21, 47.98,
-        47.76, 47.54, 47.32, 47.10, 46.87,
-        46.65, 46.43, 46.21, 45.98, 45.76
+        51.33, 55.72, 53.06, 45.39, 46.22,
+        47.56, 49.79, 50.65, 46.80, 47.56,
+        52.98, 49.76, 51.92, 55.72, 47.71,
+        49.83, 42.11, 48.47, 47.71, 54.71,
+        51.16, 47.54, 46.22, 53.84, 48.57,
+        50.82, 46.43, 52.40, 45.98, 47.56
     ]
 }
 
 df = pd.DataFrame(data)
 
 def get_image(path):
-    return OffsetImage(plt.imread(path), zoom=0.4)
+    try:
+        from PIL import Image
+        img = Image.open(path)
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        return OffsetImage(img, zoom=0.4)
+    except Exception as e:
+        print(f"Warning: Could not load logo {path}: {e}")
+        return None
 
 # Set the style
 plt.style.use('default')
@@ -49,7 +57,7 @@ fig, (ax_names, ax_bars) = plt.subplots(1, 2, figsize=(12, 12.5),
                                        gridspec_kw={'width_ratios': [0.8, 1.7]})
 
 # Create y positions
-y_positions = np.arange(len(df)*0.65, 0, -0.65)
+y_positions = np.arange(len(df)*0.5, 0, -0.5)
 
 # Add player names and logos in the left subplot
 for i, (_, row) in enumerate(df.iterrows()):
@@ -57,16 +65,17 @@ for i, (_, row) in enumerate(df.iterrows()):
     logo_path = f"logos/{row['Team']}.png"
     if os.path.exists(logo_path):
         logo = get_image(logo_path)
-        ab = AnnotationBbox(logo, (0.05, y_positions[i]),
-                          frameon=False, box_alignment=(0.5, 0.5))
-        ax_names.add_artist(ab)
+        if logo is not None:
+            ab = AnnotationBbox(logo, (0.05, y_positions[i]),
+                              frameon=False, box_alignment=(0.5, 0.5))
+            ax_names.add_artist(ab)
     
     # Add rank and player name
     ax_names.text(0.2, y_positions[i], f"{row['Rank']}. {row['Player']}", 
                  fontsize=14, va='center', ha='left')
 
 # Create horizontal bars
-bars = ax_bars.barh(y_positions, df['Entropy'], height=0.25, color='#1f77b4')
+bars = ax_bars.barh(y_positions, df['Entropy'], height=0.35, color='green', alpha=0.7)
 
 # Add entropy values at the end of each bar
 for i, value in enumerate(df['Entropy']):
@@ -74,17 +83,17 @@ for i, value in enumerate(df['Entropy']):
                 va='center', ha='left', fontsize=14)
 
 # Customize plots with two-line title
-fig.text(0.5, 0.96, 'Top 30 Outside Linebackers - 2022 Season', 
+fig.text(0.5, 0.96, 'NFL Outside Linebacker (OLB) Entropy Distribution (2022)', 
          fontsize=22, fontweight='bold', ha='center')
-fig.text(0.5, 0.93, 'Ranked by PFF 2022 Rankings and Showing Calculated Entropy Values', 
+fig.text(0.5, 0.93, 'Top 30 OLB Ranked by PFF', 
          fontsize=22, ha='center')
 
 # Set axis labels
-ax_bars.set_xlabel('Defensive Entropy Value', fontsize=14, fontweight='bold', labelpad=5)
+ax_bars.set_xlabel('Defensive Entropy Value (Normalized)', fontsize=14, fontweight='bold', labelpad=5)
 
 # Set axis limits
 ax_names.set_xlim(0, 1.1)
-ax_bars.set_xlim(min(df['Entropy']) - 0.5, max(df['Entropy']) + 1)
+ax_bars.set_xlim(40, 60)
 
 # Remove y-axis ticks and labels
 ax_names.set_yticks([])
@@ -104,6 +113,7 @@ ax_names.set_xticks([])
 # Add grid to bars subplot
 ax_bars.grid(True, axis='x', alpha=0.2)
 ax_bars.tick_params(axis='x', labelsize=14)
+ax_bars.set_xticks(np.arange(40, 65, 5))  # Set x-axis ticks every 5 units from 40 to 60
 
 # Adjust layout
 plt.subplots_adjust(wspace=0, top=0.90, bottom=0.05, left=0.02, right=0.98)
