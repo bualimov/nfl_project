@@ -105,10 +105,6 @@ ax_names.set_xticks([])
 ax_bars.grid(True, axis='x', alpha=0.2)
 ax_bars.tick_params(axis='x', labelsize=14)
 
-# Make x-axis tick labels bold
-for label in ax_bars.get_xticklabels():
-    label.set_fontweight('bold')
-
 # Adjust layout
 plt.subplots_adjust(wspace=0, top=0.90, bottom=0.05, left=0.02, right=0.98)
 
