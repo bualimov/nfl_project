@@ -10,18 +10,15 @@ def create_field_grid(grid_size=1.0):
     y_grid = np.arange(0, 53.3, grid_size)
     return np.meshgrid(x_grid, y_grid)
 
-def calculate_player_entropy_vectorized(player_x, player_y, player_dir, player_speed, all_defenders_x, all_defenders_y, X, Y):
-    """Vectorized entropy calculation"""
+def calculate_player_entropy_vectorized(player_x, player_y, player_dir, player_speed,
+                                all_defenders_x, all_defenders_y, X, Y, play_direction):
     # Constants
-    w_theta = 0.3
-    w_v = 0.2
-    v_max = 10.0
-    sigma = 2.0
-    ball_y = 26.65
-    
-    # Calculate probability distribution
-    p = np.zeros_like(X)
-    
+    sigma = 1.0  # Spatial spread parameter
+    w_theta = 0.3  # Weight for orientation
+    w_v = 0.2  # Weight for velocity
+    v_max = 10.0  # Maximum velocity threshold
+    ball_y = 26.65  # Middle of the field width (53.3/2)
+
     # Use broadcasting for faster computation
     distances = np.sqrt((X[None, :, :] - all_defenders_x[:, None, None])**2 + 
                        (Y[None, :, :] - all_defenders_y[:, None, None])**2)
@@ -30,8 +27,9 @@ def calculate_player_entropy_vectorized(player_x, player_y, player_dir, player_s
     # Normalize probabilities
     p = p / (np.sum(p) + 1e-10)
     
-    # Calculate orientation factor
-    theta_relative = np.abs(player_dir - np.degrees(np.arctan2(ball_y - player_y, 60 - player_x)))
+    # Calculate orientation factor based on play direction
+    target_x = 120 if play_direction == 'right' else 0
+    theta_relative = np.abs(player_dir - np.degrees(np.arctan2(ball_y - player_y, target_x - player_x)))
     orientation_factor = 1 + w_theta * np.cos(np.radians(theta_relative))
     
     # Calculate velocity factor
@@ -74,7 +72,7 @@ def main():
         print(f"\nProcessing Week {week}...")
         tracking_df = pd.read_csv(f'tracking_week_{week}.csv',
                                 usecols=['gameId', 'playId', 'nflId', 'frameId', 'event',
-                                        'x', 'y', 'dir', 's', 'club'])
+                                        'x', 'y', 'dir', 's', 'club', 'playDirection'])
         print(f"Loaded tracking data: {len(tracking_df):,} rows")
         
         # Process plays
@@ -119,6 +117,9 @@ def main():
             is_success = any([is_no_gain, is_pass_defense, is_qb_hit])
             category = 'success' if is_success else 'failure'
             
+            # Get play direction from tracking data
+            play_direction = play_frames['playDirection'].iloc[0]
+            
             # Process each defensive player
             for _, frame in play_frames.iterrows():
                 player_id = frame['nflId']
@@ -135,7 +136,7 @@ def main():
                     frame['x'], frame['y'], frame['dir'], frame['s'],
                     defenders_same_frame['x'].values,
                     defenders_same_frame['y'].values,
-                    X, Y
+                    X, Y, play_direction
                 )
                 
                 position_results[category][position].append(entropy)
