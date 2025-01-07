@@ -66,14 +66,19 @@ try:
     red_colors = ['#c0392b', '#e74c3c', '#ec7063', '#f1948a', '#f5b7b1', '#fadbd8', '#fdedec']
     
     # Create figure with subplots
-    fig = plt.figure(figsize=(20, 18))
+    fig = plt.figure(figsize=(16, 28))  # Increased height from 24 to 28
     
     # Add title explaining the filtering
-    fig.suptitle(f'Formation and Coverage Analysis\nBased on {total_plays:,} plays with valid pre-snap timing (1-40 seconds)',
-                 y=0.95, fontsize=16, weight='bold')
+    fig.text(0.5, 0.95, 'Formation and Coverage Analysis', 
+             fontsize=24, weight='bold', ha='center', va='bottom')
+    fig.text(0.5, 0.94, f'Based on {total_plays:,} plays with valid pre-snap timing (1-40 seconds)',
+             fontsize=22, ha='center', va='top')
+    
+    # Create subplots with specific spacing
+    gs = plt.GridSpec(4, 1, height_ratios=[1, 0.25, 1, 0.25], hspace=0.2)  # Reduced legend space ratio from 0.3 to 0.25
     
     # 1. Offensive Formation and Receiver Alignment Chart
-    plt.subplot(2, 1, 1)
+    ax1 = plt.subplot(gs[0])  # First row for graph
     
     # Create stacked bar chart
     bottom = np.zeros(len(off_cross))
@@ -104,17 +109,21 @@ try:
         plt.text(i, bottom[i] + 50, f'Total: {int(total):,}\n({percentage:.0f}%)',
                 ha='center', va='bottom', fontsize=12, weight='bold')
     
-    plt.title('Offensive Formation and Receiver Alignment Distribution', pad=20, size=16, weight='bold')
-    plt.xlabel('Offensive Formation', size=14, weight='bold')
-    plt.ylabel('Number of Plays', size=14, weight='bold')
-    plt.xticks(rotation=45, ha='right', fontsize=12)
-    plt.legend(title='Receiver Alignment', bbox_to_anchor=(1.05, 1), loc='upper left',
-              title_fontsize=14, fontsize=12)
+    plt.title('Offensive Formation and Receiver Alignment Distribution', pad=15, size=24, weight='bold')
+    plt.xlabel('Offensive Formation', size=24, weight='bold')
+    plt.ylabel('Number of Plays', size=24, weight='bold')
+    plt.xticks(rotation=45, ha='right', fontsize=14)
+    plt.yticks(fontsize=14)
     plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.ylim(0, 9000)  # Set y-axis limit to 9000 plays
+    plt.ylim(0, 9000)
+    
+    # Legend for first plot
+    plt.subplot(gs[1]).set_visible(False)  # Space for first legend
+    ax1.legend(title='Receiver Alignment', bbox_to_anchor=(0.5, -0.2), loc='upper center',
+              title_fontsize=16, fontsize=14, ncol=5)
     
     # 2. Defensive Coverage and Man/Zone Chart
-    plt.subplot(2, 1, 2)
+    ax2 = plt.subplot(gs[2])  # Third row for graph
     
     # Create vertical stacked bar chart
     bottom = np.zeros(len(def_cross))
@@ -142,18 +151,23 @@ try:
         plt.text(i, bottom[i] + 50, f'Total: {total:,}\n({percentage:.0f}%)',
                 ha='center', va='bottom', fontsize=12, weight='bold')
     
-    plt.title('Defensive Coverage and Man/Zone Distribution', pad=20, size=16, weight='bold')
-    plt.xlabel('Coverage Type', size=14, weight='bold')
-    plt.ylabel('Number of Plays', size=14, weight='bold')
-    plt.xticks(rotation=45, ha='right', fontsize=12)
-    plt.legend(title='Coverage Scheme', bbox_to_anchor=(1.05, 1), loc='upper left',
-              title_fontsize=14, fontsize=12)
+    plt.title('Defensive Coverage and Man/Zone Distribution', pad=15, size=24, weight='bold')
+    plt.xlabel('Coverage Type', size=24, weight='bold')
+    plt.ylabel('Number of Plays', size=24, weight='bold')
+    plt.xticks(rotation=45, ha='right', fontsize=14)
+    plt.yticks(fontsize=14)
     plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.ylim(0, 9000)  # Set y-axis limit to 9000 plays
+    plt.ylim(0, 9000)
+    
+    # Legend for second plot
+    plt.subplot(gs[3]).set_visible(False)  # Space for second legend
+    ax2.legend(title='Coverage Scheme', bbox_to_anchor=(0.5, -0.25), loc='upper center',
+              title_fontsize=16, fontsize=14, ncol=4)
     
     # Adjust layout and save
-    plt.tight_layout(pad=4.0, rect=[0, 0, 0.85, 0.95])
-    plt.savefig('formation_coverage_analysis.png', dpi=300, bbox_inches='tight')
+    plt.tight_layout(pad=2.0, rect=[0.05, 0.02, 0.95, 0.98])
+    plt.subplots_adjust(hspace=0.4)  # Adjust space between subplots
+    plt.savefig('formation_coverage_analysis.png', dpi=300, bbox_inches='tight', pad_inches=0.3)
     print("\nVisualization saved as 'formation_coverage_analysis.png'")
     
     # Print text summaries

@@ -78,8 +78,15 @@ def create_sample_size_plot():
     plt.close()
 
 def create_entropy_difference_plot():
-    # Create figure
-    plt.figure(figsize=(12, 6))
+    # Create figure with white background
+    plt.figure(figsize=(12, 6), facecolor='white')
+    ax = plt.gca()
+    ax.set_facecolor('white')
+    
+    # Add black border
+    for spine in ax.spines.values():
+        spine.set_color('black')
+        spine.set_linewidth(1.0)
     
     # Prepare data
     positions = results_df['Position']
@@ -92,21 +99,31 @@ def create_entropy_difference_plot():
     # Add horizontal line at y=0
     plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
     
-    # Add labels and title
-    plt.xlabel('Defensive Position')
-    plt.ylabel('Entropy Difference (Success - Failure)')
-    plt.title('Entropy Difference by Position')
+    # Add labels and title with increased size and bold weight
+    plt.xlabel('Defensive Position', size=20, weight='bold', labelpad=10)
+    plt.ylabel('Entropy Difference (Success - Failure)', size=20, weight='bold', labelpad=10)
+    plt.title('Entropy Difference by Position', size=20, weight='bold', pad=15)
     
-    # Add value labels on top/bottom of bars
+    # Set tick label font sizes and remove gridlines
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.grid(False)
+    
+    # Set y-axis limits
+    plt.ylim(-7, 3)
+    
+    # Add value labels on top/bottom of bars with increased spacing
     for bar in bars:
         height = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width()/2., height,
+        y_offset = 0.2 if height >= 0 else -0.2  # Increased offset for label spacing
+        plt.text(bar.get_x() + bar.get_width()/2., height + y_offset,
                 f'{height:.2f}',
-                ha='center', va='bottom' if height >= 0 else 'top')
+                ha='center', va='bottom' if height >= 0 else 'top',
+                fontsize=14)
     
     # Save plot
     plt.tight_layout()
-    plt.savefig('entropy_difference_by_position.png', dpi=300, bbox_inches='tight')
+    plt.savefig('entropy_difference_by_position.png', dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
 
 def create_success_rate_plot():
